@@ -1,4 +1,4 @@
-from cache import Cache, LocalCache, NullCache
+from rdcache import Cache, DummyBackend
 
 
 class CallCounter:
@@ -12,7 +12,7 @@ class CallCounter:
 
 # begin tests
 def test_basic():
-    backend = LocalCache()
+    backend = DummyBackend()
     cache = Cache(backend, enabled=True)
 
     c = cache("counter")(CallCounter())
@@ -24,7 +24,7 @@ def test_basic():
 
 
 def test_disable():
-    backend = LocalCache()
+    backend = DummyBackend()
     cache = Cache(backend, enabled=False)
 
     c = cache("counter")(CallCounter())
@@ -36,7 +36,7 @@ def test_disable():
 
 
 def test_bust():
-    backend = LocalCache()
+    backend = DummyBackend()
     cache = Cache(backend, bust=True)
 
     c = cache("counter")(CallCounter())
@@ -47,44 +47,8 @@ def test_bust():
     assert backend.get("counter")
 
 
-def test_null():
-    backend = NullCache()
-    cache = Cache(backend)
-
-    cc = CallCounter()
-
-    c = cache("counter")(cc)
-
-    assert c() == 1
-    assert c() == 2
-    try:
-        c.cached()
-    except KeyError:
-        pass
-    else:
-        assert False, "should raise KeyError"
-
-
-def test_default():
-    backend = NullCache()
-    cache = Cache(backend)
-
-    cc = CallCounter()
-
-    c = cache("counter", default=42)(cc)
-
-    assert c() == 1
-    assert c() == 2
-
-    # because we're using NullCache, the cache should always be
-    # empty.
-    assert c.cached() == 42
-
-    assert not backend.get("counter")
-
-
 def test_key_default():
-    backend = LocalCache
+    backend = DummyBackend()
     cache = Cache(backend)
 
     @cache()
@@ -95,7 +59,7 @@ def test_key_default():
 
 
 def test_arguments():
-    cache = Cache(LocalCache())
+    cache = Cache(DummyBackend())
 
     @cache("mykey")
     def return_arguments(*a, **kw):
@@ -107,7 +71,7 @@ def test_arguments():
 
 
 def test_hash_arguments():
-    backend = LocalCache()
+    backend = DummyBackend()
     cache = Cache(backend)
 
     @cache("mykey")

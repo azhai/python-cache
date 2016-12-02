@@ -2,17 +2,30 @@
 
 ## Installation
 
-    pip install cache
+    pip install rdcache
 
 ## Usage:
 
 ``` python
+# For memcache
 import pylibmc
-from cache import Cache
-
+from rdcache import Cache
 backend = pylibmc.Client(["127.0.0.1"])
-
 cache = Cache(backend)
+
+# For Redis
+REDIS_CONFS = {
+    "default": {
+        "host": "127.0.0.1",
+        "port": 6379,
+        "password": "",
+        "db": 0,
+    },
+}
+from rdcache.ext import RedisCache, RedisPool
+redis = RedisPool(REDIS_CONFS)
+cache = RedisCache(redis.get('default'), touch = True)
+
 
 @cache("mykey")
 def some_expensive_method():
@@ -42,11 +55,6 @@ Options can be passed to either the `Cache` constructor or the decorator.  Optio
                `.cached()`.  This is useful for development, when the
                function may be changing rapidly.
                Default: True
-
-    bust       If `True`, the values in the backend cache will be
-               ignored, and new data will be calculated and written
-               over the old values.
-               Default: False
 
     default    If given, `.cached()` will return the given value instead
                of raising a KeyError.

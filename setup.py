@@ -3,16 +3,16 @@ from setuptools import setup, find_packages
 from os.path import join, dirname
 import sys
 sys.path.insert(0, join(dirname(__file__), 'src'))
-from cache.version import __version__
+from rdcache import __version__
 sys.path.pop(0)
 
 setup(
-    name="cache",
+    name="rdcache",
     version=__version__,
-    description="caching for humans",
-    author="Jay Adkisson",
-    url="https://github.com/jayferd/python-cache",
-    author_email="j4yferd at gmail dot com (humans only, please)",
+    description="caching for humans, forked from jneen/python-cache",
+    author="Jay Adkisson, Ryan Liu",
+    author_email="azhai (at) 126 (dot) com",
+    url="https://github.com/azhai/rdcache",
     license="MIT",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -21,7 +21,8 @@ setup(
         "Topic :: Database :: Front-Ends",
         "License :: OSI Approved :: MIT License",
     ],
-    keywords="cache decorator humans",
+    keywords=["cache", "decorator"],
     packages=find_packages('src'),
     package_dir={'': 'src'},
+    install_requires=['redis', 'anyjson'], #if use rdcache.ext.RedisCache
 )
