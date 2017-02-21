@@ -74,6 +74,8 @@ class RedisCache(Cache):
         return self.backend.hgetall(key)
 
     def put_hash(self, key, value, **kwargs):
+        if not value:
+            return 0
         for k, v in value.items():
             value[k] = self.coerce_string(v)
         result = self.backend.hmset(key, value)
