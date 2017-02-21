@@ -16,19 +16,19 @@ class DummyBackend:
         else:
             self._expire[key] = time.time() + stamp
     
-    def is_expire(self, key):
+    def is_exists(self, key, **kwargs):
         stamp = self._expire.get(key, -1)
         if 0 <= stamp < time.time():
             del self._cache[key]
             del self._expire[key]
-            return True
-        else:
             return False
+        else:
+            return True
 
-    def set(self, key, value, **kwargs):
+    def get_data(self, key, **kwargs):
+        return self._cache.get(key)
+
+    def set_data(self, key, value, **kwargs):
         self._cache[key] = value
         self.expire(key, **kwargs)
-
-    def get(self, key, **kwargs):
-        if not self.is_expire(key):
-            return self._cache.get(key)
+        return True

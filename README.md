@@ -58,20 +58,29 @@ Options can be passed to either the `Cache` constructor or the decorator.  Optio
 
     default    If given, `.cached()` will return the given value instead
                of raising a KeyError.
+               
+    type       data/json
+               hash/list/set/sorted (if backend is redis)
+               Default: data
+               
+    time       expire seconds
+               Default: -1 (forever)
+                
+    touch      If true, expire time seconds everytime include reading data 
+    
+    fill_none  If true, write a string "###CACHE_NONE###" hold the place
 
 The remaining options, if given, will be passed as keyword arguments to the backend's `set` method.  This is useful for things like expiration times - for example, using pylibmc:
 
 ``` python
-@cache("some_key", time=1000)
-def expensive_method():
+@cache("some_key_%s_%d", type='json', time=3600)
+def expensive_method(name, ver=1):
     # ...
 ```
 
-## Local Caches
+## Dummy Cache
 
-Cache provides two "fake" caches for local development without a backend cache: `LocalCache` and `NullCache`.  `LocalCache` uses a dictionary in place of a backend cache, and `NullCache` is a noop on `set` and always returns `None` on `get`.
-
-The difference between passing `enabled=False` to the cache and using `NullCache` comes in when you use the `.cached()` method.  If the cache is disabled, `.cached()` will run the underlying function, but `NullCache` will throw a `KeyError` as if the key was not present.
+Cache provides a "fake" caches for local development without a backend cache: `DummyCache`.
 
 ### P.S.
 

@@ -22,8 +22,8 @@ class CacheWrapper:
     
     _ABSENT_DEFAULT = '###ABSENT_DEFAULT###'
 
-    def __init__(self, converter, key, calculate, **kwargs):
-        self.converter = converter
+    def __init__(self, handler, key, calculate, **kwargs):
+        self.handler = handler
         self.key = key
         self.calculate = calculate
         self.default = kwargs.pop('default', self._ABSENT_DEFAULT)
@@ -32,12 +32,23 @@ class CacheWrapper:
     def _has_default(self):
         return self.default != self._ABSENT_DEFAULT
 
+    def generate_key(self, *args, **kwargs):
+        """ Generate cache key """
+        if args:
+            return self.key % args
+        else:
+            return self.key % kwargs
+
     def _get_cached(self, *args, **kwargs):
-        if not self.converter.enabled:
-            return self.calculate(*args, **kwargs)
-        key = self.converter.prepare_key(self.key, *args, **kwargs)
-        kwargs.update(self.options)
-        return self.converter.get(key, **kwargs)
+        if not self.handler.enabled:
+            result = self.calculate(*args, **kwargs)
+        else:
+            key = self.generate_key(*args, **kwargs)
+            kwargs.update(self.options)
+            result = self.handler.load(key, **kwargs)
+        if result is None and self._has_default():
+            result = self.default
+        return result
 
     def cached(self, *args, **kwargs):
         try:
@@ -50,10 +61,10 @@ class CacheWrapper:
 
     def refresh(self, *args, **kwargs):
         value = self.calculate(*args, **kwargs)
-        if self.converter.enabled:
-            key = self.converter.prepare_key(self.key, *args, **kwargs)
+        if self.handler.enabled:
+            key = self.generate_key(*args, **kwargs)
             kwargs.update(self.options)
-            self.converter.set(key, value, **kwargs)
+            self.handler.save(key, value, **kwargs)
         return value
 
     def get(self, *args, **kwargs):
