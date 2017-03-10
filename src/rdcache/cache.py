@@ -120,6 +120,7 @@ class Cache(object):
         return result
 
     def get(self, key, **kwargs):
+        type = kwargs.get('type', '').lower()
         if kwargs.get('fill_none'):
             try:
                 value = self.get_data(key, **kwargs)
@@ -127,24 +128,32 @@ class Cache(object):
                     return None
             except TypeError:
                 pass
-        type = kwargs.get('type', '').lower()
         method = 'get_%s' % type
         if not type or not hasattr(self, method):
             method = 'get_data'
+        self.before_get(key, type = type)
         prepared = getattr(self, method)(key, **kwargs)
         return self.unprepare_value(prepared, type = type)
 
     def put(self, key, value, **kwargs):
+        type = kwargs.get('type', '').lower()
         if kwargs.get('fill_none'):
             if self.is_empty(value):
+                self.call_backend('delete', key)
                 prepared = self.prepare_value(None)
                 return self.put_data(key, prepared, **kwargs)
-        type = kwargs.get('type', '').lower()
         method = 'put_%s' % type
         if not type or not hasattr(self, method):
             method = 'put_data'
+        self.before_put(key, type = type)
         prepared = self.prepare_value(value, type = type)
         return getattr(self, method)(key, prepared, **kwargs)
+
+    def before_get(self, key, type = ''):
+        return
+
+    def before_put(self, key, type = ''):
+        return
 
     def expire(self, key, **kwargs):
         return

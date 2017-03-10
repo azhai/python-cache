@@ -60,6 +60,12 @@ class RedisCache(Cache):
     def is_exists(self, key, **kwargs):
         return self.backend.exists(key)
 
+    def before_put(self, key, type = ''):
+        val_type = self.backend.type(key)
+        if val_type != type:
+            self.backend.delete(key)
+        return
+
     def get_data(self, key, **kwargs):
         val_type = self.backend.type(key)
         if val_type != 'string':
