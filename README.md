@@ -60,15 +60,14 @@ Options can be passed to either the `Cache` constructor or the decorator.  Optio
                of raising a KeyError.
                
     type       data/json
-               hash/list/set/sorted (if backend is redis)
+               hash/list/set/zset (if backend is redis)
                Default: data
                
     time       expire seconds
                Default: -1 (forever)
                 
     touch      If true, expire time seconds everytime include reading data 
-    
-    fill_none  If true, write a string "###CACHE_NONE###" hold the place
+
 
 The remaining options, if given, will be passed as keyword arguments to the backend's `set` method.  This is useful for things like expiration times - for example, using pylibmc:
 
