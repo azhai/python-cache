@@ -19,7 +19,7 @@ class CacheWrapper:
     refresh   Re-calculate and re-cache the value, regardless of the
               contents of the backend cache.
     """
-    
+
     _ABSENT_DEFAULT = '###ABSENT_DEFAULT###'
 
     def __init__(self, handler, key, calculate, **kwargs):
@@ -59,7 +59,7 @@ class CacheWrapper:
         except KeyError as err:
             if self._has_default():
                 return self.default
-            else:
+            elif kwargs.get('raise_error', True):
                 raise err
 
     def refresh(self, *args, **kwargs):
@@ -72,12 +72,14 @@ class CacheWrapper:
 
     def get(self, *args, **kwargs):
         try:
-            result = self._fetch_cached(*args, **kwargs)
+            return self._fetch_cached(*args, **kwargs)
         except KeyError:
-            self.refresh(*args, **kwargs)
-            # 第一次也从缓存取出，以保持一致
-            result = self._fetch_cached(*args, **kwargs)
-        return result
+            origin = self.refresh(*args, **kwargs)
+        # 第一次也从缓存取出，以保持一致
+        try:
+            return self._fetch_cached(*args, **kwargs)
+        except:
+            return origin
 
     def __call__(self, *args, **kwargs):
         return self.get(*args, **kwargs)
