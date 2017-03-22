@@ -25,7 +25,6 @@ class Cache(object):
     """
     
     _CACHE_NONE = '###CACHE_NONE###'
-    type_defaults = {}
 
     def __init__(self, backend = None, enabled = True, **default_options):
         self.backend, self.enabled = backend, enabled
@@ -96,6 +95,9 @@ class Cache(object):
     def expire(self, key, **kwargs):
         return
 
+    def get_type_default(self, type = ''):
+        return
+
     def load(self, key, **kwargs):
         if not self.is_exists(key, **kwargs):
             raise KeyError
@@ -108,7 +110,7 @@ class Cache(object):
             prepared = getattr(self, method)(key, **kwargs)
             result = self.unprepare_value(prepared, type = type)
         except TypeError:
-            result = self.type_defaults.get(type)
+            result = self.get_type_default(type = type)
         if kwargs.get('touch'):
             self.expire(key, **kwargs)
         return result

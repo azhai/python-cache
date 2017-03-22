@@ -36,8 +36,6 @@ class RedisPool:
 class RedisCache(Cache):
     """ Redis cache """
     
-    type_defaults = {'hash':{}, 'zset':[], 'list':[], 'set':set()}
-    
     def __init__(self, backend, **default_options):
         enabled = default_options.pop('enabled', True)
         super(RedisCache, self).__init__(backend, enabled, **default_options)
@@ -49,6 +47,14 @@ class RedisCache(Cache):
         if kwargs.has_key('time'):
             time = int(kwargs['time'])
             return self.backend.expire(key, time)
+
+    def get_type_default(self, type = ''):
+        if type == 'hash':
+            return {}
+        elif type == 'list' or type == 'zset':
+            return []
+        elif type == 'set':
+            return set()
 
     def before_get(self, key, type = ''):
         if self.backend.type(key) != type:
