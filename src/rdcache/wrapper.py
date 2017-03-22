@@ -29,30 +29,33 @@ class CacheWrapper:
         self.default = kwargs.pop('default', self._ABSENT_DEFAULT)
         self.options = kwargs
 
-    def _has_default(self):
-        return self.default != self._ABSENT_DEFAULT
-
     def generate_key(self, *args, **kwargs):
-        """ Generate cache key """
+        """ 生成key，使用格式化字符串的方法 """
         if args:
             return self.key % args
         else:
             return self.key % kwargs
 
-    def _get_cached(self, *args, **kwargs):
+    def _has_default(self):
+        return self.default != self._ABSENT_DEFAULT
+
+    def _fetch_cached(self, *args, **kwargs):
         if not self.handler.enabled:
             result = self.calculate(*args, **kwargs)
         else:
             key = self.generate_key(*args, **kwargs)
             kwargs.update(self.options)
             result = self.handler.load(key, **kwargs)
-        if result is None and self._has_default():
-            result = self.default
+        if result is None:
+            if self._has_default():
+                result = self.default
+            else:
+                result = None
         return result
 
     def cached(self, *args, **kwargs):
         try:
-            return self._get_cached(*args, **kwargs)
+            return self._fetch_cached(*args, **kwargs)
         except KeyError as err:
             if self._has_default():
                 return self.default
@@ -69,9 +72,12 @@ class CacheWrapper:
 
     def get(self, *args, **kwargs):
         try:
-            return self._get_cached(*args, **kwargs)
+            result = self._fetch_cached(*args, **kwargs)
         except KeyError:
-            return self.refresh(*args, **kwargs)
+            self.refresh(*args, **kwargs)
+            # 第一次也从缓存取出，以保持一致
+            result = self._fetch_cached(*args, **kwargs)
+        return result
 
     def __call__(self, *args, **kwargs):
         return self.get(*args, **kwargs)

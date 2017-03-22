@@ -1,15 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import inspect
 import anyjson
-
 from .wrapper import CacheWrapper
-
-
-def filter_kwargs(method, **kwargs):
-    """ Just leave the needed kwargs """
-    args = inspect.getargspec(method).args
-    return dict([(k, kwargs[k]) for k in args if k in kwargs])
+from .utils import filter_kwargs, coerce_value
 
 
 class Cache(object):
@@ -32,6 +25,7 @@ class Cache(object):
     """
     
     _CACHE_NONE = '###CACHE_NONE###'
+    type_defaults = {}
 
     def __init__(self, backend = None, enabled = True, **default_options):
         self.backend, self.enabled = backend, enabled
@@ -69,19 +63,14 @@ class Cache(object):
             return CacheWrapper(self, cache_key, fn, **options)
 
         return _cache
-        
-    def format_options(self, **options):
+
+    @staticmethod
+    def format_options(**options):
         if options.has_key('timeout'):
             options['time'] = int(options.pop('timeout', 0))
         if options.has_key('valtype'):
             options['type'] = options.pop('valtype', '')
         return options
-        
-    def call_backend(self, name, *args, **kwargs):
-        """ Safe call method of the backend """
-        method = getattr(self.backend, name)
-        kwargs = filter_kwargs(method, **kwargs)
-        return method(*args, **kwargs)
 
     def prepare_value(self, value, type = ''):
         """ encode value """
@@ -101,67 +90,59 @@ class Cache(object):
         else:
             return prepared
 
-    def is_empty(self, value):
-        return value == self._CACHE_NONE or not value
+    def is_exists(self, key, **kwargs):
+        raise NotImplemented
+
+    def expire(self, key, **kwargs):
+        return
 
     def load(self, key, **kwargs):
-        #Need a None or empty struct to raise KeyError
-        #e.g. redis.hgetall() return empty dict
         if not self.is_exists(key, **kwargs):
             raise KeyError
-        result = self.get(key, **kwargs)
+        type = kwargs.get('type', '').lower()
+        method = 'get_%s' % type
+        if not type or not hasattr(self, method):
+            method = 'get_data'
+        try:
+            self.before_get(key, type = type)
+            prepared = getattr(self, method)(key, **kwargs)
+            result = self.unprepare_value(prepared, type = type)
+        except TypeError:
+            result = self.type_defaults.get(type)
         if kwargs.get('touch'):
             self.expire(key, **kwargs)
         return result
 
     def save(self, key, value, **kwargs):
-        result = self.put(key, value, **kwargs)
-        self.expire(key, **kwargs)
-        return result
-
-    def get(self, key, **kwargs):
         type = kwargs.get('type', '').lower()
-        self.before_get(key, type = type)
-        if kwargs.get('fill_none'):
-            try:
-                value = self.get_data(key, **kwargs)
-                if self.is_empty(value):
-                    return None
-            except TypeError:
-                pass
-        method = 'get_%s' % type
-        if not type or not hasattr(self, method):
-            method = 'get_data'
-        prepared = getattr(self, method)(key, **kwargs)
-        return self.unprepare_value(prepared, type = type)
-
-    def put(self, key, value, **kwargs):
-        type = kwargs.get('type', '').lower()
-        self.before_put(key, type = type)
-        if kwargs.get('fill_none'):
-            if self.is_empty(value):
-                prepared = self.prepare_value(None)
-                return self.put_data(key, prepared, **kwargs)
         method = 'put_%s' % type
         if not type or not hasattr(self, method):
             method = 'put_data'
-        prepared = self.prepare_value(value, type = type)
-        return getattr(self, method)(key, prepared, **kwargs)
+        try:
+            self.before_put(key, value, type = type)
+            prepared = self.prepare_value(value, type = type)
+            result = getattr(self, method)(key, prepared, **kwargs)
+        except TypeError:
+            prepared = self.prepare_value(None, type = type)
+            result = self.put_data(key, prepared, **kwargs)
+        self.expire(key, **kwargs)
+        return result
 
     def before_get(self, key, type = ''):
         return
 
-    def before_put(self, key, type = ''):
+    def before_put(self, key, value, type = ''):
         return
-
-    def expire(self, key, **kwargs):
-        return
-
-    def is_exists(self, key, **kwargs):
-        raise NotImplemented
 
     def get_data(self, key, **kwargs):
         return self.call_backend('get', key, **kwargs)
 
     def put_data(self, key, value, **kwargs):
+        value = coerce_value(value)
         return self.call_backend('set', key, value, **kwargs)
+
+    def call_backend(self, name, *args, **kwargs):
+        """ Safe call method of the backend """
+        method = getattr(self.backend, name)
+        kwargs = filter_kwargs(method, **kwargs)
+        return method(*args, **kwargs)
