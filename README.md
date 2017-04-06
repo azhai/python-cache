@@ -2,7 +2,7 @@
 
 ## Installation
 
-    pip install rdcache
+    pip install -U anyjson redis rdcache
 
 ## Usage:
 
@@ -20,30 +20,34 @@ REDIS_CONFS = {
         "port": 6379,
         "password": "",
         "db": 0,
+        "socket_timeout": 3600,
+        "max_connections": 128,
     },
 }
 from rdcache.ext import RedisCache, RedisPool
 redis = RedisPool(REDIS_CONFS)
-cache = RedisCache(redis.get('default'), touch = True)
+cache = RedisCache(redis.get('default'), touch = False)
 
 
-@cache("mykey")
-def some_expensive_method():
+@cache("mykey-%s")
+def some_expensive_method(num):
     sleep(10)
-    return 42
+    if not isinstance(num, int):
+        if isinstance(num, basestring) and num.isdigit():
+            num = int(num)
+        else:
+            num = 0
+    return num
 
-# writes 42 to the cache
-some_expensive_method()
-
-# reads 42 from the cache
-some_expensive_method()
+# reads 42 from the cache, the key is mykey-42
+some_expensive_method(42)
 
 # re-calculates and writes 42 to the cache
-some_expensive_method.refresh()
+some_expensive_method.refresh(42)
 
 # get the cached value or throw an error
 # (unless default= was passed to @cache(...))
-some_expensive_method.cached()
+some_expensive_method.cached(42)
 ```
 
 ## Options
@@ -60,7 +64,7 @@ Options can be passed to either the `Cache` constructor or the decorator.  Optio
                of raising a KeyError.
                
     type       data/json
-               hash/list/set/zset (if backend is redis)
+               string/json/hash/list/set/zset (if backend is redis)
                Default: data
                
     time       expire seconds

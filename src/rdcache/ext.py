@@ -57,14 +57,17 @@ class RedisCache(Cache):
             return set()
 
     def before_get(self, key, type = ''):
-        if self.backend.type(key) != type:
+        if type == 'json':
+            type = 'string'
+        if self.backend.type(key) != type: #没有缓存
             raise TypeError
         return
 
     def before_put(self, key, value, type = ''):
         self.backend.delete(key)
-        if not value and type not in ['string', 'json']:
-            raise TypeError
+        if type not in ['string', 'json']:
+            if not value:
+                raise TypeError
         return
 
     def get_hash(self, key, **kwargs):
